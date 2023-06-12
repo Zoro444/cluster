@@ -75,17 +75,17 @@ else {
         ), "utf-8"
     );
     csvDataWriteJson.write('[');
-    let addedObjects = 0;
+    let firstData = true;
 
     const csvData = fs.createReadStream(path.join(path.resolve(), message.filePath), "utf-8")
+        .on('open', () => { start = new Date();})
         .pipe(csv())
-        .on('open', () => {  })
         .on('data', (data) => {
-            csvDataWriteJson.write(addedObjects === 0
+            csvDataWriteJson.write(firstData 
                 ? JSON.stringify(data)
                 : `,${JSON.stringify(data)}`
             );
-            addedObjects++;
+            firstData = false;
         })
         .on('end', () => {
             csvDataWriteJson.write(']');
@@ -100,15 +100,10 @@ else {
               });
         });
 
-    csvData.on('open', (data) => {
-      start = new Date();
-    })
-
     csvData.on('close', (data) => {
-      console.log(message.filePath, new Date() - start);  
       let parsingInfo = {
         fileName: message.filePath,
-        duration: new Date() - start,
+        duration: (new Date() - start) + "ms",
       }   
       process.send(parsingInfo);
 
