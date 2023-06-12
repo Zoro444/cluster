@@ -67,24 +67,42 @@ else {
 
     let start;
 
-    const csvData = fs.createReadStream(path.join(path.resolve(), message.filePath), "utf-8");
-    
+
     const csvDataWriteJson = fs.createWriteStream(
-      path.join(
-        path.resolve(), csvDirectory, 'converted', 
-        `${path.basename(message.fileName, path.extname(message.fileName))}.json`
-      ), "utf-8"
+        path.join(
+            path.resolve(), csvDirectory, 'converted', 
+            `${path.basename(message.fileName, path.extname(message.fileName))}.json`
+        ), "utf-8"
     );
+    csvDataWriteJson.write('[');
+    let addedObjects = 0;
+
+    const csvData = fs.createReadStream(path.join(path.resolve(), message.filePath), "utf-8")
+        .pipe(csv())
+        .on('open', () => {  })
+        .on('data', (data) => {
+            csvDataWriteJson.write(addedObjects === 0
+                ? JSON.stringify(data)
+                : `,${JSON.stringify(data)}`
+            );
+            addedObjects++;
+        })
+        .on('end', () => {
+            csvDataWriteJson.write(']');
+
+            csvDataWriteJson.end((err) => {
+                if (err) {
+                  console.error('Error writing to file:', err);
+                  return;
+                }
+                console.log('Data written to output.json file');
+
+              });
+        });
 
     csvData.on('open', (data) => {
       start = new Date();
     })
-
-    csvData.on('data', (data) => {
-      start = new Date();
-    })
-
-    csvData.pipe(csvDataWriteJson);
 
     csvData.on('close', (data) => {
       console.log(message.filePath, new Date() - start);  
@@ -94,7 +112,7 @@ else {
       }   
       process.send(parsingInfo);
 
-      process.exit();
+      setTimeout(process.exit);
     })    
   });
 }
